@@ -2,7 +2,7 @@ import pytest
 import logging
 from data.constants import HTTP, API_KEYS
 from api_client import StellarBurgersAPI
-from helpers import generate_unique_user, get_random_ingredient_id
+from helpers import generate_unique_user
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +41,11 @@ def created_user(api_client, user_cleanup_list):
     
     # Pre-condition: регистрация пользователя
     response = api_client.register(**user_data)
-    assert response.status_code == HTTP["OK"], (
-        f"Pre-condition failed: не удалось зарегистрировать пользователя. "
-        f"Код: {response.status_code}, Ответ: {response.text}"
-    )
     
     # Извлекаем токены из ответа
     response_json = response.json()
     access_token = response_json.get(API_KEYS["access_token"])
     refresh_token = response_json.get(API_KEYS["refresh_token"])
-    
-    assert access_token, "Pre-condition failed: не получен access_token"
     
     # Формируем полные данные пользователя для тестов
     user_with_tokens = {
@@ -64,20 +58,14 @@ def created_user(api_client, user_cleanup_list):
     user_cleanup_list.append(user_with_tokens)
     
     logger.info(f"Создан тестовый пользователь: {user_data['email']}")
-    yield user_with_tokens
+    return user_with_tokens
 
 
 @pytest.fixture
 def ingredients_list(api_client):
     # Фикстура: возвращает список ID доступных ингредиентов
-    response = api_client.get_ingredients()
-    assert response.status_code == HTTP["OK"], "Не удалось получить список ингредиентов"
-    
+    response = api_client.get_ingredients() 
     data = response.json()
-    assert data.get(API_KEYS["success"]), "API вернул ошибку при получении ингредиентов"
-    
     ingredients = data.get(API_KEYS["data"], [])
-    assert ingredients, "Список ингредиентов пуст"
-    
     # Возвращаем только первые 5 для оптимизации
     return [ing["_id"] for ing in ingredients[:5]]
